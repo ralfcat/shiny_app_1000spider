@@ -13,7 +13,7 @@ import numpy as np
 from pathlib import Path
 
 
-# Paths to data files
+#paths
 blast_db_path = "combined_genes_blastdb\\combined_genes"
 orthogroup_data_path = "datasets/filtered_with_ids_no_dupes.tsv"
 expression_data_path = "datasets/summed_lasc_expression.txt"
@@ -29,19 +29,15 @@ tissue_to_svg = {
     "Tubuliform-gland": "svg/Tubuliform",
 }
 
-# Ensure the order of SVG files matches the columns in expression_data
 svg_files = [tissue_to_svg[tissue] for tissue in tissue_to_svg.keys()]
 
-
-# Load datasets
+#load datasets and datapreprocessing
 orthogroup_data = pd.read_csv(orthogroup_data_path, sep="\t", index_col=0)
 expression_data = pd.read_csv(expression_data_path, sep="\t")
 
-# Exclude specific columns
 columns_to_exclude = ["wholebody", "Duct", "Sac", "Tail"]
 filtered_columns = [col for col in expression_data.columns if col not in columns_to_exclude]
 
-# Ensure "Orthogroup" is included
 if "Orthogroup" not in filtered_columns:
     filtered_columns.insert(0, "Orthogroup")  # Add it at the start
 
@@ -49,7 +45,7 @@ expression_data_filtered = expression_data[filtered_columns]
 
 
 
-# Helper functions
+#helper funcitons
 def find_orthogroup_and_species(best_match_id, orthogroup_data):
     for orthogroup, row in orthogroup_data.iterrows():
         for column in orthogroup_data.columns[1:]:  # Skip the first column (Orthogroup)
@@ -76,7 +72,6 @@ def parse_path_data(path_data):
 def create_spider_visualization_with_animation(expression_values, svg_files, spider_image_path):
     spider_image = Image.open(spider_image_path)
 
-    # Parse all SVG files
     areas = []
     for svg_file in svg_files:
         tree = ET.parse(svg_file)
@@ -278,7 +273,7 @@ def create_expression_boxplot(expression_values, tissue_names):
 
 
 def server(input, output, session):
-    session_data = reactive.Value({})  # Reactive storage for session data
+    session_data = reactive.Value({})  #reactive storage for session data
 
     @reactive.Effect
     @reactive.event(input.submit)
@@ -346,18 +341,17 @@ def server(input, output, session):
     def blast_result():
         data = session_data.get()
 
-        # Check for errors and display them
         if "error" in data:
             return ui.div(
                 ui.strong("Error: "),
                 ui.span(data["error"], style="color: red;"),
             )
 
-        # If no BLAST result is available yet
+        
         if "best_match_id" not in data:
-            return None  # No UI rendered when no results are available
+            return None  
 
-        # Display the best match results in a styled table
+        
         species = data.get("species", "Unknown")
         df = pd.DataFrame(
             [
@@ -371,13 +365,13 @@ def server(input, output, session):
 
         table_html = df.to_html(
             classes="table table-primary table-striped",
-            index=False,  # Hide index column
+            index=False,  
             border=0,
         )
 
-        # Dynamically display the header with the table
+        
         return ui.TagList(
-            ui.h3("BLAST Search Results", class_="mt-4"),  # Add header dynamically
+            ui.h3("BLAST Search Results", class_="mt-4"),  
             ui.HTML(table_html),
         )
 
@@ -392,14 +386,13 @@ def server(input, output, session):
         if df.empty:
             return None
 
-        # Render the table with a custom "table-primary" class and dynamically display the header
         table_html = df.to_html(
             classes="table table-primary table-striped",
             index=False,  # Hide the index column
             border=0,
         )
         return ui.TagList(
-            ui.h3("Expression Data", class_="mt-4"),  # Add header dynamically
+            ui.h3("Expression Data", class_="mt-4"),  
             ui.HTML(table_html),
         )
 
@@ -415,15 +408,14 @@ def server(input, output, session):
         if expr_data.empty:
             return None
 
-        expr_values = expr_data.iloc[0, 1:].values  # Exclude "Orthogroup" column
-        tissue_names = expr_data.columns[1:]  # Exclude "Orthogroup"
+        expr_values = expr_data.iloc[0, 1:].values  #Exclude "Orthogroup" column
+        tissue_names = expr_data.columns[1:]  
 
         if input.view_selector() == "Spider Visualization":
             img_path = create_spider_visualization_with_animation(expr_values, svg_files, spider_image_path)
         else:
             img_path = create_expression_boxplot(expr_values, tissue_names)
 
-        # Return the expected dictionary with src, width, and height
         return {
             "src": img_path,
             "width": "600px",
@@ -431,5 +423,5 @@ def server(input, output, session):
         }
 
 
-# Create Shiny App
+#run the app
 app = App(app_ui, server)
