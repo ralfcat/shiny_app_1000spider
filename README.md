@@ -1,18 +1,7 @@
 Spider Gene Visualization App - Installation Instructions
-Step 1: Clone or Download the Project
 
-To get the project files, you can either clone the repository using Git or download the files manually.
 
-    Using Git:
-    Open your terminal or command prompt and run the following commands:
-
-    git clone https://github.com/yourusername/spider-gene-visualization.git  
-    cd spider-gene-visualization  
-
-    Manual Download:
-    Go to the repository on GitHub, click on "Download ZIP", and extract the contents to your desired location.
-
-Step 2: Install Dependencies
+Step 1: Install Dependencies
 
 The project requires Python libraries to run. To install these, follow these steps:
 
@@ -29,7 +18,7 @@ The project requires Python libraries to run. To install these, follow these ste
     If pip is not installed, follow the official guide here:
     Install pip for Python.
 
-Step 3: Install NCBI BLAST+
+Step 2: Install NCBI BLAST+
 
 The app uses BLAST+ to perform sequence alignment searches.
 1. Download BLAST+
@@ -96,11 +85,6 @@ How to Use the App
 
     Enter FASTA Sequence:
         Paste a valid nucleotide or protein FASTA sequence into the input box.
-
-    Select BLAST Type:
-        Choose between:
-            BLASTP: For protein sequences.
-            BLASTX: For nucleotide sequences translated to protein.
 
     Submit:
         Click the "Submit" button to start the BLAST search.
