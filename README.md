@@ -1,24 +1,15 @@
-Spider Gene Visualization App - Installation Instructions
+#Spider Gene Visualization App - Installation Instructions
+
+##Step 1: Download the blast database
+The blast database consists of fasta files of all of the filtered orthogroups. This database is REQUIRED for the Shiny app to run. The zip-file needs to be downloaded from this UPPMAX-directory:
+*/proj/uppstore2019013/nobackup/private/1000spider_master_project/busco/busco_results_filtered/combined_genes_blastdb.zip*
+
+Extract this zip folder in the directory where you have cloned this git-repository.
+The folder strucutre should look like this:
+![bild](https://github.com/user-attachments/assets/b6c4f132-a02a-422b-8bd3-0387f10214b6)
 
 
-Step 1: Install Dependencies
-
-The project requires Python libraries to run. To install these, follow these steps:
-
-    Ensure you have Python 3.10 or higher installed.
-        Download Python
-        During installation, check "Add Python to PATH".
-
-    Install the required Python libraries:
-
-    Open your terminal or command prompt in the project folder and run:
-
-    pip install -r requirements.txt  
-
-    If pip is not installed, follow the official guide here:
-    Install pip for Python.
-
-Step 2: Install NCBI BLAST+
+##Step 1: Install NCBI BLAST+
 
 The app uses BLAST+ to perform sequence alignment searches.
 1. Download BLAST+
@@ -29,13 +20,12 @@ The app uses BLAST+ to perform sequence alignment searches.
         Run the installer and install BLAST+ on your system.
 
     Mac/Linux:
-        Download the BLAST+ archive:
-        Download BLAST+
-        Extract the downloaded archive to your desired location.
+        Use homebrew to download it. Run the command:  brew install blast. If you dont have homebrew installed, run this: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-2. Add BLAST+ to System PATH
 
-To ensure the app can find BLAST+, you need to add its bin folder to your system PATH.
+3. Add BLAST+ to System PATH
+
+To ensure the app can find BLAST+, you need to add its bin folder to your system PATH. *On macOS it did automatically when using homebrew.*
 
     Windows:
         Open the Start Menu and search for "Environment Variables".
@@ -45,17 +35,7 @@ To ensure the app can find BLAST+, you need to add its bin folder to your system
         Click New and paste the path to the BLAST bin folder (e.g., C:\Program Files\NCBI\blast-2.13.0+\bin).
         Click OK and restart your computer.
 
-    Mac/Linux:
-    Add the following line to your shell profile (~/.bashrc or ~/.zshrc):
-
-export PATH=/path/to/blast/bin:$PATH  
-
-Replace /path/to/blast/bin with the actual path where BLAST+ was extracted.
-
-Apply changes by running:
-
-    source ~/.bashrc  
-
+    
 3. Verify BLAST Installation
 
 Open your terminal/command prompt and run the following command:
@@ -63,28 +43,23 @@ Open your terminal/command prompt and run the following command:
 blastp -version  
 
 If the installation is successful, it will show the installed BLAST version.
-Step 4: Run the Application
+##Step 2: Install Dependencies
 
-    Open a terminal or command prompt in the project folder.
+The project requires Python libraries to run. 
+Run the file *setup_and_run.py*. It should install all the required packages and you will be prompted to press enter to start the application.
 
-    Run the application:
 
-python app.py  
+##Step 4: Run the Application
 
-If you encounter version issues, use:
+Run *setup_and_run.py* and press enter when prompted. If you already have the dependencies installed, you can stand in the directory of *shiny_app_prot.py* and run this command: *shiny run shiny_app_prot.py*. This should start the Shiny application. If it doesn't, make sure that you are standing in the correct directory which contains the app (*shiny_app_prot.pt*)
 
-python3 app.py  
+Open a browser and go to the adress prompted by the terminal. It is usually http://127.0.0.1:8000 
 
-Once the app starts successfully, it will provide a local URL:
 
-    http://127.0.0.1:8000  
-
-    Open this URL in your browser to access the app.
-
-How to Use the App
+##How to Use the App
 
     Enter FASTA Sequence:
-        Paste a valid nucleotide or protein FASTA sequence into the input box.
+        Paste a protein FASTA sequence in the box
 
     Submit:
         Click the "Submit" button to start the BLAST search.
@@ -94,7 +69,12 @@ How to Use the App
         Expression Data: Shows expression levels for the identified orthogroup.
         Spider Visualization: Highlights expression in specific tissues or glands.
 
-Troubleshooting
+##Troubleshooting
+
+If the terminal outputs *INFO connection lost* after running the blast search and seeing the Spider visualization, run this command in the terminal in the directory where the app is located:
+*uvicorn shiny_app_prot:app --timeout-keep-alive 240*
+
+
 "BLAST Not Found" Error
 
     Ensure BLAST+ is installed and added to your system PATH.
