@@ -153,37 +153,43 @@ app_ui = ui.page_fluid(
                 class_="text-center text-muted",
             ),
         ),
-        # Main Content: Input Box Centered and About Box on Left
+        # Main Content Wrapper
         ui.div(
             {
                 "class": "d-flex justify-content-center align-items-start flex-grow-1",
-                "style": "position: relative;",
+                "style": "position: relative; margin-top: 30px;",
             },
-            # About Box (independent of Input Box)
+            # About Box Positioned to the Left
             ui.Tag(
                 "div",
-                {"class": "card p-3 shadow-lg", "style": "width: 30%; max-width: 350px; border: 3px solid #86d3c9; position: absolute; left: 10%;"},
+                {
+                    "class": "card p-3 shadow-lg",
+                    "style": (
+                        "width: 20%; max-width: 300px; border: 3px solid #86d3c9; "
+                        "position: absolute; left: 10%; top: 0;"
+                    ),
+                },
                 ui.h4("About", class_="text-center mb-3"),
                 ui.p(
-                    "This application allows you to input a FASTA sequence to identify the corresponding orthogroup based on a dataset containing 9000+ orthogroups from 292 spider species. "
-                    ,
+                    "This application allows you to input a FASTA sequence to identify the corresponding orthogroup "
+                    "based on a dataset containing 9000+ orthogroups from 292 spider species.",
                     class_="mb-2",
                 ),
                 ui.p(
-                    "It visualize the orthogroups expression levels in tissues in the model spider Larinioides sclopetarius, with the most expressed tissue being extra highlighted."
-                    ,
-                    class_="mb-2",
-                ),                
-                ui.p(
-                    "The data includes spider gene orthogroups, tissue-specific expression data, and visualizations of the spiders anatomy. "
-                    "The app uses BLASTP searches to process the input.",
+                    "It visualizes the orthogroups' expression levels in tissues of the model spider Larinioides sclopetarius, "
+                    "with the most expressed tissue highlighted.",
                     class_="mb-2",
                 ),
             ),
-            # Centered Input Box
+            # Input Box Centered Horizontally
             ui.Tag(
                 "div",
-                {"class": "card p-4 shadow-lg", "style": "width: 50%; max-width: 800px; border: 3px solid #86d3c9; margin: 0 auto;"},
+                {
+                    "class": "card p-4 shadow-lg",
+                    "style": (
+                        "width: 40%; max-width: 600px; border: 3px solid #86d3c9; margin: 0 auto;"
+                    ),
+                },
                 ui.h4("Input Your Data", class_="text-center mb-4"),
                 ui.div(
                     ui.input_text_area(
@@ -192,25 +198,25 @@ app_ui = ui.page_fluid(
                         rows=6,
                         placeholder="Paste your FASTA sequence here...",
                     ),
-                    style="display: flex; justify-content: center;" ,  # Center input box
+                    style="display: flex; justify-content: center; width: 100%;",
                 ),
                 ui.div(
                     ui.input_action_button(
-                        "submit", "Submit", class_="btn btn-secondary btn-lg btn-block mt-2"
+                        "submit", "Submit", class_="btn btn-secondary btn-lg btn-block mt-3"
                     ),
-                    style="display: flex; justify-content: center;",  # Center submit button
+                    style="display: flex; justify-content: center; width: 100%;",
                 ),
                 ui.div(
                     ui.input_select(
                         "view_selector",
-                        "Select Visualization Type:",
+                        "",
                         choices=["Spider Visualization", "Expression Boxplot"],
                     ),
-                    style="margin-top: 20px; display: flex; justify-content: center;",  # Center dropdown
+                    style="margin-top: 20px; display: flex; justify-content: center; width: 100%;",
                 ),
             ),
         ),
-        # Results Section: BLAST Results, Expression Data, and Visualization
+                # Results Section: BLAST Results, Expression Data, and Visualization
         ui.div(
             ui.h3("BLAST Results", class_="text-center mt-4", style="display: none;"),
             ui.div(ui.output_ui("blast_result"), class_="container"),
@@ -241,13 +247,13 @@ app_ui = ui.page_fluid(
                     "height: 40px; color: white; background-color: #78c2ad; "
                     "padding-top: 10px; z-index: 1000; border: none; margin: 0; box-shadow: none;"
                 ),
-            },  # Fixed footer
+            },
             ui.div(
                 ui.span("1000 Spider Project 2024", class_="text-white"),
                 ui.span(" | Developed by Victor Englöf", class_="text-white"),
-                class_="small",  # Reduce font size
+                class_="small",
             ),
-        )
+        ),
     ),
 )
 
