@@ -61,7 +61,7 @@ Open a browser and go to the adress prompted by the terminal. It is usually http
 ## How to Use the App
 
 Enter FASTA Sequence:
-    Paste a protein FASTA sequence in the box
+    Paste a protein FASTA sequence in the box. There are random FASTA sequences located in the folder *test_fasta_sequences*
 
 Submit:
     Click the "Submit" button to start the BLAST search.
