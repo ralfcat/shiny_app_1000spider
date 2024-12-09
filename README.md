@@ -9,41 +9,41 @@ The folder strucutre should look like this:
 ![bild](https://github.com/user-attachments/assets/b6c4f132-a02a-422b-8bd3-0387f10214b6)
 
 
-## Step 1: Install NCBI BLAST+
+## Step 2: Install NCBI BLAST+
 
 The app uses BLAST+ to perform sequence alignment searches.
-1. Download BLAST+
+### Download BLAST+
+Windows:
+    Download the BLAST+ installer:
+    Download BLAST+ for Windows
+    Run the installer and install BLAST+ on your system.
 
-    Windows:
-        Download the BLAST+ installer:
-        Download BLAST+ for Windows
-        Run the installer and install BLAST+ on your system.
-
-    Mac/Linux:
-        Use homebrew to download it. Run the command:  brew install blast. If you dont have homebrew installed, run this: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+Mac/Linux:
+    Use homebrew to download it. Run the command:  brew install blast. If you dont have homebrew installed, run this: 
+*/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)*
 
 
-3. Add BLAST+ to System PATH
+### Add BLAST+ to System PATH
 
 To ensure the app can find BLAST+, you need to add its bin folder to your system PATH. *On macOS it did automatically when using homebrew.*
 
-    Windows:
-        Open the Start Menu and search for "Environment Variables".
-        Click "Edit the system environment variables".
-        In the System Properties window, click "Environment Variables".
-        Under "System Variables", find the Path variable and click Edit.
-        Click New and paste the path to the BLAST bin folder (e.g., C:\Program Files\NCBI\blast-2.13.0+\bin).
-        Click OK and restart your computer.
+Windows:
+    Open the Start Menu and search for "Environment Variables".
+    Click "Edit the system environment variables".
+    In the System Properties window, click "Environment Variables".
+    Under "System Variables", find the Path variable and click Edit.
+    Click New and paste the path to the BLAST bin folder (e.g., C:\Program Files\NCBI\blast-2.13.0+\bin).
+    Click OK and restart your computer.
 
     
-3. Verify BLAST Installation
+### Verify BLAST Installation
 
 Open your terminal/command prompt and run the following command:
 
 blastp -version  
 
 If the installation is successful, it will show the installed BLAST version.
-##Step 2: Install Dependencies
+## Step 3: Install Dependencies
 
 The project requires Python libraries to run. 
 Run the file *setup_and_run.py*. It should install all the required packages and you will be prompted to press enter to start the application.
@@ -51,23 +51,24 @@ Run the file *setup_and_run.py*. It should install all the required packages and
 
 ## Step 4: Run the Application
 
-Run *setup_and_run.py* and press enter when prompted. If you already have the dependencies installed, you can stand in the directory of *shiny_app_prot.py* and run this command: *shiny run shiny_app_prot.py*. This should start the Shiny application. If it doesn't, make sure that you are standing in the correct directory which contains the app (*shiny_app_prot.pt*)
+Run *setup_and_run.py* and press enter when prompted. If you already have the dependencies installed, you can stand in the directory of *shiny_app_prot.py* and run this command: *shiny run shiny_app_prot.py*. 
+This should start the Shiny application. If it doesn't, make sure that you are standing in the correct directory which contains the app (*shiny_app_prot.pt*)
 
 Open a browser and go to the adress prompted by the terminal. It is usually http://127.0.0.1:8000 
 
 
 ## How to Use the App
 
-    Enter FASTA Sequence:
-        Paste a protein FASTA sequence in the box
+Enter FASTA Sequence:
+    Paste a protein FASTA sequence in the box
 
-    Submit:
-        Click the "Submit" button to start the BLAST search.
+Submit:
+    Click the "Submit" button to start the BLAST search.
 
-    View Results:
-        BLAST Results: Displays the closest match and its associated E-value.
-        Expression Data: Shows expression levels for the identified orthogroup.
-        Spider Visualization: Highlights expression in specific tissues or glands.
+View Results:
+    BLAST Results: Displays the closest match and its associated E-value.
+    Expression Data: Shows expression levels for the identified orthogroup.
+    Spider Visualization: Highlights expression in specific tissues or glands.
 
 ## Troubleshooting
 
