@@ -19,8 +19,9 @@ Windows:
     Run the installer and install BLAST+ on your system.
 
 Mac/Linux:
-    Use homebrew to download it. Run the command:  brew install blast. If you dont have homebrew installed, run this: 
-*/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)*
+    Use homebrew to download it. Run the command: *brew install blast*. 
+    If you dont have homebrew installed, run this: 
+    */bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)*
 
 
 ### Add BLAST+ to System PATH
