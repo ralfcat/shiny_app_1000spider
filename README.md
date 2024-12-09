@@ -1,6 +1,6 @@
-#Spider Gene Visualization App - Installation Instructions
+# Spider Gene Visualization App - Installation Instructions
 
-##Step 1: Download the blast database
+## Step 1: Download the blast database
 The blast database consists of fasta files of all of the filtered orthogroups. This database is REQUIRED for the Shiny app to run. The zip-file needs to be downloaded from this UPPMAX-directory:
 */proj/uppstore2019013/nobackup/private/1000spider_master_project/busco/busco_results_filtered/combined_genes_blastdb.zip*
 
@@ -9,7 +9,7 @@ The folder strucutre should look like this:
 ![bild](https://github.com/user-attachments/assets/b6c4f132-a02a-422b-8bd3-0387f10214b6)
 
 
-##Step 1: Install NCBI BLAST+
+## Step 1: Install NCBI BLAST+
 
 The app uses BLAST+ to perform sequence alignment searches.
 1. Download BLAST+
@@ -49,14 +49,14 @@ The project requires Python libraries to run.
 Run the file *setup_and_run.py*. It should install all the required packages and you will be prompted to press enter to start the application.
 
 
-##Step 4: Run the Application
+## Step 4: Run the Application
 
 Run *setup_and_run.py* and press enter when prompted. If you already have the dependencies installed, you can stand in the directory of *shiny_app_prot.py* and run this command: *shiny run shiny_app_prot.py*. This should start the Shiny application. If it doesn't, make sure that you are standing in the correct directory which contains the app (*shiny_app_prot.pt*)
 
 Open a browser and go to the adress prompted by the terminal. It is usually http://127.0.0.1:8000 
 
 
-##How to Use the App
+## How to Use the App
 
     Enter FASTA Sequence:
         Paste a protein FASTA sequence in the box
@@ -69,7 +69,7 @@ Open a browser and go to the adress prompted by the terminal. It is usually http
         Expression Data: Shows expression levels for the identified orthogroup.
         Spider Visualization: Highlights expression in specific tissues or glands.
 
-##Troubleshooting
+## Troubleshooting
 
 If the terminal outputs *INFO connection lost* after running the blast search and seeing the Spider visualization, run this command in the terminal in the directory where the app is located:
 *uvicorn shiny_app_prot:app --timeout-keep-alive 240*
@@ -92,7 +92,7 @@ Incorrect Python Version
 
     Install Python 3.10 or later and ensure it is added to your system PATH.
 
-Credits
+## Credits
 
     Developer: Victor Englöf
     Project: Spider Gene Visualization App (2024)
