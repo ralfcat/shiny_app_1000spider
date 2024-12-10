@@ -17,11 +17,12 @@ from pathlib import Path
 blast_db_path = "combined_genes_blastdb\\combined_genes"
 orthogroup_data_path = "datasets/filtered_with_ids_no_dupes.tsv"
 expression_data_path = "datasets/summed_lasc_expression.txt"
+clavata_expression_path = "datasets/summed_clavata_expression.txt"
 spider_image_path = "visualizations/spider_image.png"
+# Define the mapping between expression columns and SVG files
 # Define the mapping between expression columns and SVG files
 tissue_to_svg = {
     "Flagelliform-gland": "svg/Flagelliform",
-    "head": "svg/head",
     "Major-ampullate-gland": "svg/Major_ampullate",
     "Minor-ampullate-gland": "svg/minor_ampullate",
     "Aggregate-gland": "svg/Aggregate",
@@ -29,20 +30,43 @@ tissue_to_svg = {
     "Tubuliform-gland": "svg/Tubuliform",
 }
 
-svg_files = [tissue_to_svg[tissue] for tissue in tissue_to_svg.keys()]
-
-#load datasets and datapreprocessing
+# Load datasets
 orthogroup_data = pd.read_csv(orthogroup_data_path, sep="\t", index_col=0)
 expression_data = pd.read_csv(expression_data_path, sep="\t")
+expression_data_clavata = pd.read_csv(clavata_expression_path, sep="\t")
 
-columns_to_exclude = ["wholebody", "Duct", "Sac", "Tail"]
-filtered_columns = [col for col in expression_data.columns if col not in columns_to_exclude]
+# Exclude non-tissue columns
+columns_to_exclude = [
+    "wholebody", "Duct", "Sac", "Tail", "Female-whole-body", "Male-whole-body", 
+    "Hemolymph", "Pedipalp", "Leg", "Epidermis", "Venom-gland", "Fat-body", "head", "Ovary", "Orthogroup"
+]
 
+# Filter columns for both datasets
+filtered_columns = sorted([col for col in expression_data.columns if col not in columns_to_exclude])
+filtered_columns_clavata = sorted([col for col in expression_data_clavata.columns if col not in columns_to_exclude])
+
+# Ensure the order of SVG files matches the filtered columns in both datasets
+svg_files = [tissue_to_svg[tissue] for tissue in filtered_columns if tissue in tissue_to_svg]
+svg_files_clavata = [tissue_to_svg[tissue] for tissue in filtered_columns_clavata if tissue in tissue_to_svg]
+# Debugging: Print to check alignment
+print("Filtered Columns (LASC Expression Data):", filtered_columns)
+print("SVG Files (LASC):", svg_files)
+print("Filtered Columns (Clavata Expression Data):", filtered_columns_clavata)
+print("SVG Files (Clavata):", svg_files_clavata)
+
+# Verify that the SVG files align correctly for both datasets
+if len(svg_files) != len(filtered_columns):
+    raise ValueError("Mismatch between LASC expression data columns and SVG files. Check tissue_to_svg mapping.")
+if len(svg_files_clavata) != len(filtered_columns_clavata):
+    raise ValueError("Mismatch between Clavata expression data columns and SVG files. Check tissue_to_svg mapping.")
+
+if "Orthogroup" not in filtered_columns_clavata:
+    filtered_columns_clavata.insert(0, "Orthogroup")
 if "Orthogroup" not in filtered_columns:
-    filtered_columns.insert(0, "Orthogroup")  # Add it at the start
+    filtered_columns.insert(0, "Orthogroup")  
 
 expression_data_filtered = expression_data[filtered_columns]
-
+expression_data_clavata_filtered = expression_data_clavata[filtered_columns_clavata]
 
 
 #helper funcitons
@@ -69,62 +93,93 @@ def parse_path_data(path_data):
             continue
     return coordinates
 
-def create_spider_visualization_with_animation(expression_values, svg_files, spider_image_path):
-    spider_image = Image.open(spider_image_path)
+def create_spider_visualization_with_animation(svg_files, spider_image_path, expression_values=None, expression_values_clavata=None):
+    def generate_polygons(ax, expression_values, title):
+        """Helper function to plot polygons with correct heatmap scaling on a given axis."""
+        spider_image = Image.open(spider_image_path)
 
-    areas = []
-    for svg_file in svg_files:
-        tree = ET.parse(svg_file)
-        root = tree.getroot()
-        namespace = {"svg": "http://www.w3.org/2000/svg"}
-        path_data = root.find(".//svg:path", namespace).attrib["d"]
-        coordinates = parse_path_data(path_data)
-        areas.append(coordinates)
+        # Parse the SVG coordinates
+        areas = []
+        for svg_file in svg_files:
+            tree = ET.parse(svg_file)
+            root = tree.getroot()
+            namespace = {"svg": "http://www.w3.org/2000/svg"}
+            path_data = root.find(".//svg:path", namespace).attrib["d"]
+            coordinates = parse_path_data(path_data)
+            areas.append(coordinates)
 
-    norm = plt.Normalize(min(expression_values), max(expression_values))
-    colormap = cm.viridis
-    max_value_index = np.argmax(expression_values)
+        # Normalize values independently for this dataset
+        norm = plt.Normalize(min(expression_values), max(expression_values))
+        colormap = cm.viridis
+        max_value_index = np.argmax(expression_values)
 
-    fig, ax = plt.subplots(figsize=(8, 8))
-    
-    # Display the image without borders
-    ax.imshow(spider_image, aspect='auto')  # Removed `extent` to let it auto-scale
-    ax.axis("off")  # Turn off axes to remove the border
+        # Plot spider image
+        ax.imshow(spider_image, aspect='auto')
+        ax.axis("off")
+        ax.set_title(title, fontsize=12, weight="bold")
 
-    polygons = []
-    for coords, value in zip(areas, expression_values):
-        color = colormap(norm(value))
-        polygon = patches.Polygon(coords, closed=True, edgecolor="black", facecolor=color, alpha=0.7, linewidth=1.5)
-        ax.add_patch(polygon)
-        polygons.append(polygon)
+        # Add polygons
+        polygons = []
+        for coords, value in zip(areas, expression_values):
+            color = colormap(norm(value))
+            polygon = patches.Polygon(coords, closed=True, edgecolor="black", facecolor=color, alpha=0.7, linewidth=1.5)
+            ax.add_patch(polygon)
+            polygons.append(polygon)
 
-    # Animation function to make the max expression area blink and add a red border
-    def animate(frame):
-        alpha = 0.1 + 0.7 * np.abs(np.sin(frame * 0.1))  # Oscillates between 0.3 and 1.0
-        for i, polygon in enumerate(polygons):
-            if i == max_value_index:
-                polygon.set_alpha(alpha)
-                polygon.set_edgecolor("red")  # Set red border
-                polygon.set_linewidth(3)  # Make the border thicker
-            else:
-                polygon.set_alpha(0.7)
-                polygon.set_edgecolor("black")  # Reset other polygons' borders to black
-                polygon.set_linewidth(1)  # Reset the border thickness
+        # Animation function for blinking effect
+        def animate(frame):
+            alpha = 0.3 + 0.4 * np.abs(np.sin(frame * 0.1))
+            for i, polygon in enumerate(polygons):
+                if i == max_value_index:
+                    polygon.set_alpha(alpha)
+                    polygon.set_edgecolor("red")
+                    polygon.set_linewidth(3)
+                else:
+                    polygon.set_alpha(0.7)
+                    polygon.set_edgecolor("black")
+                    polygon.set_linewidth(1)
 
-    # Create the animation
-    ani = FuncAnimation(fig, animate, frames=100, interval=50, repeat=True)
+        # Add colorbar
+        sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
+        sm.set_array([])
+        return sm, animate
 
-    # Add a colorbar for reference
-    sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
-    sm.set_array([])
-    cbar = plt.colorbar(sm, ax=ax, orientation="vertical", fraction=0.04, pad=0.05)
-    cbar.set_label("Expression Level")
+    # Create a figure with two subplots if both datasets are provided
+    if expression_values is not None and expression_values_clavata is not None:
+        fig, axes = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={"wspace": 0.4})
+        
+        # Generate both visualizations independently
+        sm1, animate1 = generate_polygons(axes[0], expression_values, "Bridge Spider")
+        sm2, animate2 = generate_polygons(axes[1], expression_values_clavata, "Clavata")
 
-    # Save the animation as a GIF
+        # Add colorbars for each subplot
+        fig.colorbar(sm1, ax=axes[0], orientation="vertical", fraction=0.05, pad=0.04, label="Expression Level")
+        fig.colorbar(sm2, ax=axes[1], orientation="vertical", fraction=0.05, pad=0.04, label="Expression Level")
+
+        # Combine the two animations
+        ani = FuncAnimation(fig, lambda frame: (animate1(frame), animate2(frame)), frames=100, interval=50, repeat=True)
+
+    elif expression_values is not None:
+        fig, ax = plt.subplots(figsize=(6, 6))
+        sm1, animate1 = generate_polygons(ax, expression_values, "Bridge Spider")
+        fig.colorbar(sm1, ax=ax, orientation="vertical", fraction=0.05, pad=0.04, label="Expression Level")
+        ani = FuncAnimation(fig, animate1, frames=100, interval=50, repeat=True)
+
+    elif expression_values_clavata is not None:
+        fig, ax = plt.subplots(figsize=(6, 6))
+        sm2, animate2 = generate_polygons(ax, expression_values_clavata, "Clavata")
+        fig.colorbar(sm2, ax=ax, orientation="vertical", fraction=0.05, pad=0.04, label="Expression Level")
+        ani = FuncAnimation(fig, animate2, frames=100, interval=50, repeat=True)
+
+    else:
+        raise ValueError("At least one of 'expression_values' or 'expression_values_clavata' must be provided.")
+
+    # Save the animation as a single GIF
     temp_file = tempfile.NamedTemporaryFile(suffix=".gif", delete=False)
-    ani.save(temp_file.name, writer="pillow")  # Save using Pillow
+    ani.save(temp_file.name, writer="pillow")
     plt.close(fig)
     return temp_file.name
+
 
 
 
@@ -204,8 +259,16 @@ app_ui = ui.page_fluid(
                 ui.div(
                     ui.input_select(
                         "view_selector",
-                        "",
+                        "Choose Visualization:",
                         choices=["Spider Visualization", "Expression Boxplot"],
+                    ),
+                    style="margin-top: 20px; display: flex; justify-content: center; width: 100%;",
+                ),
+                ui.div(
+                    ui.input_select(
+                        "spider_selector",
+                        "Choose Model Spider:",
+                        choices=["Bridge Spider", "Clavata", "Both"],
                     ),
                     style="margin-top: 20px; display: flex; justify-content: center; width: 100%;",
                 ),
@@ -223,6 +286,7 @@ app_ui = ui.page_fluid(
                 style="display: none;",
             ),  # Initially hidden
             ui.div(ui.output_ui("expression_table"), class_="container"),
+
         ),
         ui.div(
             ui.h3(
@@ -259,13 +323,37 @@ app_ui = ui.page_fluid(
 
 
 
-def create_expression_boxplot(expression_values, tissue_names):
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.bar(tissue_names, expression_values, color="#f3969a")
-    ax.set_ylabel("Expression Levels")
-    ax.set_title("Expression Levels by Tissue")
-    ax.tick_params(axis="x", rotation=45)
-
+def create_expression_boxplot(expression_values=None, tissue_names=None, expression_values_clavata=None):
+    # Set up figure with two axes if both datasets are provided
+    if expression_values_clavata is not None and expression_values is not None:
+        fig, axes = plt.subplots(1, 2, figsize=(12, 6))  # 1 row, 2 columns for side-by-side plots
+        
+        # Bar plot for Bridge Spider
+        axes[0].bar(tissue_names, expression_values, color="#f3969a")
+        axes[0].set_title("Bridge Spider")
+        axes[0].set_ylabel("Expression Levels")
+        axes[0].tick_params(axis="x", rotation=45)
+        
+        # Bar plot for Clavata
+        axes[1].bar(tissue_names, expression_values_clavata, color="#7cb9e8")
+        axes[1].set_title("Clavata")
+        axes[1].set_ylabel("Expression Levels")
+        axes[1].tick_params(axis="x", rotation=45)
+    
+    else:
+        # If only one dataset is provided, create a single bar plot
+        fig, ax = plt.subplots(figsize=(8, 6))
+        if expression_values is not None:
+            ax.bar(tissue_names, expression_values, color="#f3969a")
+            ax.set_title("Bridge Spider")
+        elif expression_values_clavata is not None:
+            ax.bar(tissue_names, expression_values_clavata, color="#7cb9e8")
+            ax.set_title("Clavata")
+        
+        ax.set_ylabel("Expression Levels")
+        ax.tick_params(axis="x", rotation=45)
+    
+    # Save to a temporary file and return its path
     temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
     fig.savefig(temp_file.name, bbox_inches="tight")
     plt.close(fig)
@@ -282,7 +370,6 @@ def server(input, output, session):
         if not fasta_sequence:
             session_data.set({"error": "Please enter a FASTA sequence."})
             return
-
         query_file = "datasets/blast_results/query.fasta"
         with open(query_file, "w") as f:
             f.write(fasta_sequence)
@@ -382,19 +469,77 @@ def server(input, output, session):
         if "orthogroup" not in data or not data["orthogroup"]:
             return None
 
-        df = expression_data_filtered[expression_data_filtered["Orthogroup"] == data["orthogroup"]]
-        if df.empty:
-            return None
+        spider_choice = input.spider_selector()
+        
+        if spider_choice == "Bridge Spider":
+            # Filter for Bridge Spider
+            df = expression_data_filtered[expression_data_filtered["Orthogroup"] == data["orthogroup"]]
+            if df.empty:
+                return None
 
-        table_html = df.to_html(
-            classes="table table-primary table-striped",
-            index=False,  # Hide the index column
-            border=0,
-        )
-        return ui.TagList(
-            ui.h3("Expression Data", class_="mt-4"),  
-            ui.HTML(table_html),
-        )
+            table_html = df.to_html(
+                classes="table table-primary table-striped",
+                index=False,
+                border=0,
+            )
+            return ui.TagList(
+                ui.h3("Expression Data", class_="mt-4"),
+                ui.h4("Bridge Spider", class_="mt-2"),
+                ui.HTML(table_html),
+            )
+        
+        elif spider_choice == "Clavata":
+            # Filter for Clavata
+            df = expression_data_clavata_filtered[expression_data_clavata_filtered["Orthogroup"] == data["orthogroup"]]
+            if df.empty:
+                return None
+
+            table_html = df.to_html(
+                classes="table table-primary table-striped",
+                index=False,
+                border=0,
+            )
+            return ui.TagList(
+                ui.h3("Expression Data", class_="mt-4"),
+                ui.h4("Clavata", class_="mt-2"),
+                ui.HTML(table_html),
+            )
+
+        else:
+            # Filter for both datasets
+            df = expression_data_filtered[expression_data_filtered["Orthogroup"] == data["orthogroup"]]
+            df_clavata = expression_data_clavata_filtered[expression_data_clavata_filtered["Orthogroup"] == data["orthogroup"]]
+            
+            if df.empty and df_clavata.empty:
+                return None
+            
+            # Generate tables
+            table_html = ""
+            if not df.empty:
+                table_html = df.to_html(
+                    classes="table table-primary table-striped",
+                    index=False,
+                    border=0,
+                )
+            table_html_clavata = ""
+            if not df_clavata.empty:
+                table_html_clavata = df_clavata.to_html(
+                    classes="table table-primary table-striped",
+                    index=False,
+                    border=0,
+                )
+
+            # Return combined results
+            tag_list = [ui.h3("Expression Data", class_="mt-4")]
+
+            if table_html:
+                tag_list.append(ui.h4("Bridge Spider", class_="mt-2"))
+                tag_list.append(ui.HTML(table_html))
+            if table_html_clavata:
+                tag_list.append(ui.h4("Clavata", class_="mt-2"))
+                tag_list.append(ui.HTML(table_html_clavata))
+
+            return ui.TagList(*tag_list)
 
     @output
     @render.image
@@ -402,25 +547,80 @@ def server(input, output, session):
         data = session_data.get()
         if "orthogroup" not in data or not data["orthogroup"]:
             return None
-
         orthogroup = data["orthogroup"]
-        expr_data = expression_data_filtered[expression_data_filtered["Orthogroup"] == orthogroup]
-        if expr_data.empty:
-            return None
 
-        expr_values = expr_data.iloc[0, 1:].values  #Exclude "Orthogroup" column
-        tissue_names = expr_data.columns[1:]  
+        spider_choice = input.spider_selector()
+        #check if the user choose bridge spider
+        if spider_choice == "Bridge Spider":
+            expr_data = expression_data_filtered[expression_data_filtered["Orthogroup"] == orthogroup]
+            expr_values = expr_data.iloc[0, 1:].values  #Exclude "Orthogroup" column
+            tissue_names = expr_data.columns[1:] 
+            if expr_data.empty:
+                return None
+            
+        elif spider_choice == "Clavata":
+            expr_data_clavata = expression_data_clavata_filtered[expression_data_clavata_filtered["Orthogroup"] == orthogroup]
+            expr_values_clavata = expr_data_clavata.iloc[0, 1:].values
+            tissue_names_clavata = expr_data_clavata.columns[1:]
+            if expr_data_clavata.empty:
+                return None
+        else:
+            expr_data = expression_data_filtered[expression_data_filtered["Orthogroup"] == orthogroup]
+            expr_data_clavata = expression_data_clavata_filtered[expression_data_clavata_filtered["Orthogroup"] == orthogroup]
+
+            expr_values = expr_data.iloc[0, 1:].values  #Exclude "Orthogroup" column
+            expr_values_clavata = expr_data_clavata.iloc[0, 1:].values
+
+            tissue_names = expr_data.columns[1:] 
+
+            if expr_data.empty or expr_data_clavata.empty:
+                return None
 
         if input.view_selector() == "Spider Visualization":
-            img_path = create_spider_visualization_with_animation(expr_values, svg_files, spider_image_path)
+            if spider_choice == "Bridge Spider":
+                img_path = create_spider_visualization_with_animation(svg_files, spider_image_path, expression_values=expr_values)
+                return {
+                    "src": img_path,
+                    "width": "600px",
+                    "height": "600px",
+                }
+            elif spider_choice == "Clavata":
+                img_path = create_spider_visualization_with_animation(svg_files, spider_image_path, expression_values_clavata=expr_values_clavata)
+                return {
+                    "src": img_path,
+                    "width": "600px",
+                    "height": "600px",
+                }
+            else:
+                img_path = create_spider_visualization_with_animation(svg_files, spider_image_path, expression_values=expr_values, expression_values_clavata=expr_values_clavata)
+                return {
+                    "src": img_path,
+                    "width": "1200px",
+                    "height": "600px",
+                }
         else:
-            img_path = create_expression_boxplot(expr_values, tissue_names)
-
-        return {
-            "src": img_path,
-            "width": "600px",
-            "height": "600px",
-        }
+            if spider_choice == "Bridge Spider":
+                img_path = create_expression_boxplot(expression_values=expr_values, tissue_names=tissue_names)
+                return {
+                    "src": img_path,
+                    "width": "600px",
+                    "height": "600px",
+                }
+            elif spider_choice == "Clavata":
+                img_path = create_expression_boxplot(expression_values_clavata=expr_values_clavata, tissue_names=tissue_names_clavata)
+                return {
+                    "src": img_path,
+                    "width": "600px",
+                    "height": "600px",
+                }
+            else:
+                img_path = create_expression_boxplot(expression_values=expr_values, tissue_names=tissue_names, expression_values_clavata= expr_values_clavata)
+                return {
+                    "src": img_path,
+                    "width": "1200px",
+                    "height": "600px",
+                }
+       
 
 
 #run the app
