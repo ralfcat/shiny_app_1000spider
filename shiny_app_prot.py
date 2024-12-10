@@ -19,8 +19,8 @@ orthogroup_data_path = "datasets/filtered_with_ids_no_dupes.tsv"
 expression_data_path = "datasets/summed_lasc_expression.txt"
 clavata_expression_path = "datasets/summed_clavata_expression.txt"
 spider_image_path = "visualizations/spider_image.png"
-# Define the mapping between expression columns and SVG files
-# Define the mapping between expression columns and SVG files
+#define the mapping between expression columns and SVG files
+
 tissue_to_svg = {
     "Flagelliform-gland": "svg/Flagelliform",
     "Major-ampullate-gland": "svg/Major_ampullate",
@@ -30,35 +30,21 @@ tissue_to_svg = {
     "Tubuliform-gland": "svg/Tubuliform",
 }
 
-# Load datasets
+#load the data
 orthogroup_data = pd.read_csv(orthogroup_data_path, sep="\t", index_col=0)
 expression_data = pd.read_csv(expression_data_path, sep="\t")
 expression_data_clavata = pd.read_csv(clavata_expression_path, sep="\t")
 
-# Exclude non-tissue columns
 columns_to_exclude = [
     "wholebody", "Duct", "Sac", "Tail", "Female-whole-body", "Male-whole-body", 
     "Hemolymph", "Pedipalp", "Leg", "Epidermis", "Venom-gland", "Fat-body", "head", "Ovary", "Orthogroup"
 ]
-
-# Filter columns for both datasets
+#match the svg files with the columns in the expression data
 filtered_columns = sorted([col for col in expression_data.columns if col not in columns_to_exclude])
 filtered_columns_clavata = sorted([col for col in expression_data_clavata.columns if col not in columns_to_exclude])
 
-# Ensure the order of SVG files matches the filtered columns in both datasets
 svg_files = [tissue_to_svg[tissue] for tissue in filtered_columns if tissue in tissue_to_svg]
 svg_files_clavata = [tissue_to_svg[tissue] for tissue in filtered_columns_clavata if tissue in tissue_to_svg]
-# Debugging: Print to check alignment
-print("Filtered Columns (LASC Expression Data):", filtered_columns)
-print("SVG Files (LASC):", svg_files)
-print("Filtered Columns (Clavata Expression Data):", filtered_columns_clavata)
-print("SVG Files (Clavata):", svg_files_clavata)
-
-# Verify that the SVG files align correctly for both datasets
-if len(svg_files) != len(filtered_columns):
-    raise ValueError("Mismatch between LASC expression data columns and SVG files. Check tissue_to_svg mapping.")
-if len(svg_files_clavata) != len(filtered_columns_clavata):
-    raise ValueError("Mismatch between Clavata expression data columns and SVG files. Check tissue_to_svg mapping.")
 
 if "Orthogroup" not in filtered_columns_clavata:
     filtered_columns_clavata.insert(0, "Orthogroup")
@@ -484,7 +470,7 @@ def server(input, output, session):
             )
             return ui.TagList(
                 ui.h3("Expression Data", class_="mt-4"),
-                ui.h4("Bridge Spider", class_="mt-2"),
+                ui.h4("Bridge Spider", class_="mt-2", style="text-align: center;"),
                 ui.HTML(table_html),
             )
         
@@ -501,7 +487,7 @@ def server(input, output, session):
             )
             return ui.TagList(
                 ui.h3("Expression Data", class_="mt-4"),
-                ui.h4("Clavata", class_="mt-2"),
+                ui.h4("Clavata", class_="mt-2", style="text-align: center;"),
                 ui.HTML(table_html),
             )
 
@@ -533,10 +519,10 @@ def server(input, output, session):
             tag_list = [ui.h3("Expression Data", class_="mt-4")]
 
             if table_html:
-                tag_list.append(ui.h4("Bridge Spider", class_="mt-2"))
+                tag_list.append(ui.h4("Bridge Spider", class_="mt-2", style="text-align: center;"))
                 tag_list.append(ui.HTML(table_html))
             if table_html_clavata:
-                tag_list.append(ui.h4("Clavata", class_="mt-2"))
+                tag_list.append(ui.h4("Clavata", class_="mt-2", style="text-align: center;"))
                 tag_list.append(ui.HTML(table_html_clavata))
 
             return ui.TagList(*tag_list)
@@ -595,7 +581,7 @@ def server(input, output, session):
                 img_path = create_spider_visualization_with_animation(svg_files, spider_image_path, expression_values=expr_values, expression_values_clavata=expr_values_clavata)
                 return {
                     "src": img_path,
-                    "width": "1200px",
+                    "width": "1400px",
                     "height": "600px",
                 }
         else:
@@ -617,7 +603,7 @@ def server(input, output, session):
                 img_path = create_expression_boxplot(expression_values=expr_values, tissue_names=tissue_names, expression_values_clavata= expr_values_clavata)
                 return {
                     "src": img_path,
-                    "width": "1200px",
+                    "width": "1100px",
                     "height": "600px",
                 }
        
