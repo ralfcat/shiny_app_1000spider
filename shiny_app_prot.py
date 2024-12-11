@@ -185,7 +185,7 @@ app_ui = ui.page_fluid(
         ui.div(
             ui.h2("Spider Gene Visualization App", class_="text-center mt-4"),
             ui.p(
-                "Analyze and visualize spider gene expression based on FASTA input.",
+                "Analyze and visualize spider gene expression based on FASTA input or Orthogroup number.",
                 class_="text-center text-muted",
             ),
         ),
@@ -207,13 +207,13 @@ app_ui = ui.page_fluid(
                 },
                 ui.h4("About", class_="text-center mb-3"),
                 ui.p(
-                    "This application allows you to input a FASTA sequence to identify the corresponding orthogroup "
-                    "based on a dataset containing 9000+ orthogroups from 292 spider species.",
+                    "This application allows you to input either a FASTA sequence or an Orthogroup number "
+                    "to analyze and visualize gene expression in spider tissues.",
                     class_="mb-2",
                 ),
                 ui.p(
-                    "It visualizes the orthogroups' expression levels in tissues of the model spider Larinioides sclopetarius, "
-                    "with the most expressed tissue highlighted.",
+                    "It visualizes expression levels in tissues of the model spider Larinioides sclopetarius, "
+                    "with highlights for the most expressed tissues.",
                     class_="mb-2",
                 ),
             ),
@@ -227,21 +227,26 @@ app_ui = ui.page_fluid(
                     ),
                 },
                 ui.h4("Input Your Data", class_="text-center mb-4"),
+                # Toggle Input Type
                 ui.div(
-                    ui.input_text_area(
-                        "fasta_input",
-                        "Enter FASTA Sequence:",
-                        rows=6,
-                        placeholder="Paste your FASTA sequence here...",
+                    ui.input_radio_buttons(
+                        "input_type",
+                        "Select Input Type:",
+                        choices=["FASTA Sequence", "Orthogroup Number"],
+                        selected="FASTA Sequence",
+                        inline=True,
                     ),
-                    style="display: flex; justify-content: center; width: 100%;",
+                    style="margin-bottom: 20px; display: flex; justify-content: center; width: 100%;",
                 ),
+                # Dynamic Input Area
+                ui.div(ui.output_ui("input_area"), style="display: flex; justify-content: center; width: 100%;",),
                 ui.div(
                     ui.input_action_button(
                         "submit", "Submit", class_="btn btn-secondary btn-lg btn-block mt-3"
                     ),
                     style="display: flex; justify-content: center; width: 100%;",
                 ),
+                # Visualization Options
                 ui.div(
                     ui.input_select(
                         "view_selector",
@@ -260,27 +265,23 @@ app_ui = ui.page_fluid(
                 ),
             ),
         ),
-                # Results Section: BLAST Results, Expression Data, and Visualization
+        # Results Section: BLAST Results, Expression Data, and Visualization
         ui.div(
             ui.h3("BLAST Results", class_="text-center mt-4", style="display: none;"),
             ui.div(ui.output_ui("blast_result"), class_="container"),
         ),
         ui.div(
-            ui.h3(
-                "Expression Data",
-                class_="text-center mt-4",
-                style="display: none;",
-            ),  # Initially hidden
+            ui.h3("Expression Data", class_="text-center mt-4", style="display: none;"),
             ui.div(ui.output_ui("expression_table"), class_="container"),
-
         ),
+        
         ui.div(
-            ui.h3(
-                "Visualization",
-                class_="text-center mt-4",
-                style="display: none;",
-            ),  # Initially hidden
-            ui.div(ui.output_image("expression_plot"), class_="text-center", style="margin-bottom: 250px;",),
+            ui.h3("Visualization", class_="text-center mt-4", style="display: none;"),
+            ui.div(
+                ui.output_image("expression_plot"),
+                class_="text-center",
+                style="margin-bottom: 250px;",
+            ),
         ),
         # Footer Section
         ui.Tag(
@@ -301,6 +302,7 @@ app_ui = ui.page_fluid(
         ),
     ),
 )
+
 
 
 
@@ -348,52 +350,107 @@ def create_expression_boxplot(expression_values=None, tissue_names=None, express
 
 def server(input, output, session):
     session_data = reactive.Value({})  #reactive storage for session data
+    @output
+    @render.ui
+    def input_area():
+        """Conditionally render the input box based on the selected input type."""
+        if input.input_type() == "FASTA Sequence":
+            return ui.input_text_area(
+                "fasta_input",
+                "Enter FASTA Sequence:",
+                rows=6,
+                placeholder="Paste your FASTA sequence here...",
+            )
+        else:
+            return ui.input_text_area(
+                "orthogroup_input",
+                "Enter Orthogroup Number:",
+                placeholder="e.g., OG0000050",
+            )
 
     @reactive.Effect
     @reactive.event(input.submit)
-    def run_blast():
-        fasta_sequence = input.fasta_input()
-        if not fasta_sequence:
-            session_data.set({"error": "Please enter a FASTA sequence."})
-            return
-        query_file = "datasets/blast_results/query.fasta"
-        with open(query_file, "w") as f:
-            f.write(fasta_sequence)
+    def process_input():
+        session_data.set({})  # Reset session data on new submission
 
-        blast_output = "datasets/blast_results/blast_results.txt"
-        try:
-            subprocess.run(
-                [
-                    "blastp",
-                    "-query", query_file,
-                    "-db", blast_db_path,
-                    "-out", blast_output,
-                    "-outfmt", "6",
-                    "-max_target_seqs", "1",
-                ],
-                check=True,
-            )
-        except subprocess.CalledProcessError:
-            session_data.set({"error": "BLAST failed. Please check your input."})
-            return
+        # Check input type selected by the user
+        if input.input_type() == "FASTA Sequence":
+            # Handle FASTA Sequence Input
+            fasta_sequence = input.fasta_input()
+            if not fasta_sequence:
+                session_data.set({"error": "Please enter a FASTA sequence."})
+                return
 
-        with open(blast_output) as f:
-            lines = f.readlines()
+            # Write FASTA sequence to a temporary file
+            query_file = "datasets/blast_results/query.fasta"
+            with open(query_file, "w") as f:
+                f.write(fasta_sequence)
 
-        if not lines:
-            session_data.set({"error": "No match found."})
-            return
+            # Run BLASTP
+            blast_output = "datasets/blast_results/blast_results.txt"
+            try:
+                subprocess.run(
+                    [
+                        "blastp",
+                        "-query", query_file,
+                        "-db", blast_db_path,
+                        "-out", blast_output,
+                        "-outfmt", "6",
+                        "-max_target_seqs", "1",
+                    ],
+                    check=True,
+                )
+            except subprocess.CalledProcessError:
+                session_data.set({"error": "BLAST failed. Please check your input."})
+                return
 
-        best_match = lines[0].split("\t")
-        session_data.set(
-            {
-                "best_match_id": best_match[1],
-                "e_value": best_match[10],
-                "species": "Unknown",
-                "orthogroup": None,
-            }
-        )
+            # Parse BLAST output
+            with open(blast_output) as f:
+                lines = f.readlines()
 
+            if not lines:
+                session_data.set({"error": "No match found from BLAST."})
+                return
+
+            # Extract best match ID and e-value
+            best_match = lines[0].split("\t")
+            best_match_id = best_match[1]
+            e_value = best_match[10]
+
+            # Find the corresponding Orthogroup and Species
+            orthogroup, species = find_orthogroup_and_species(best_match_id, orthogroup_data)
+            if orthogroup is None:
+                session_data.set({"error": "Orthogroup not found."})
+                return
+
+            # Save data to session
+            session_data.set({
+                "best_match_id": best_match_id,
+                "e_value": e_value,
+                "orthogroup": orthogroup,
+                "species": species,
+            })
+
+        else:
+            # Handle Orthogroup Input
+            orthogroup = input.orthogroup_input()
+            if not orthogroup:
+                session_data.set({"error": "Please enter a valid Orthogroup number."})
+                return
+
+            # Check if Orthogroup exists in the data
+            if orthogroup not in expression_data_filtered["Orthogroup"].values and \
+            orthogroup not in expression_data_clavata_filtered["Orthogroup"].values:
+                session_data.set({"error": f"No data found for Orthogroup '{orthogroup}'."})
+                return
+
+            # Save data to session
+            session_data.set({
+                "orthogroup": orthogroup,
+                "species": "N/A (Direct Orthogroup Input)"
+            })
+
+ 
     @reactive.Effect
     def find_and_visualize_orthogroup():
         data = session_data.get()
@@ -526,6 +583,27 @@ def server(input, output, session):
                 tag_list.append(ui.HTML(table_html_clavata))
 
             return ui.TagList(*tag_list)
+        
+    @output
+    @render.ui
+    def error_message():
+        data = session_data.get()
+        if "error" in data:
+            return ui.div(
+                ui.strong("Error: "),
+                ui.span(data["error"], style="color: red; font-weight: bold;"),
+                style="""
+                    color: red; 
+                    text-align: center; 
+                    margin-top: 20px; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    height: 100px;  /* Optional height for vertical centering */
+                """,
+            )
+        return None
+
 
     @output
     @render.image
@@ -533,79 +611,77 @@ def server(input, output, session):
         data = session_data.get()
         if "orthogroup" not in data or not data["orthogroup"]:
             return None
-        orthogroup = data["orthogroup"]
 
+        orthogroup = data["orthogroup"]
         spider_choice = input.spider_selector()
-        #check if the user choose bridge spider
+
+        # Check for Bridge Spider
         if spider_choice == "Bridge Spider":
             expr_data = expression_data_filtered[expression_data_filtered["Orthogroup"] == orthogroup]
-            expr_values = expr_data.iloc[0, 1:].values  #Exclude "Orthogroup" column
-            tissue_names = expr_data.columns[1:] 
             if expr_data.empty:
-                return None
-            
+                return None  # Return cleanly without setting session_data
+            expr_values = expr_data.iloc[0, 1:].values
+            tissue_names = expr_data.columns[1:]
+
+        # Check for Clavata
         elif spider_choice == "Clavata":
-            expr_data_clavata = expression_data_clavata_filtered[expression_data_clavata_filtered["Orthogroup"] == orthogroup]
+            expr_data_clavata = expression_data_clavata_filtered[
+                expression_data_clavata_filtered["Orthogroup"] == orthogroup
+            ]
+            if expr_data_clavata.empty:
+                return None  # Return cleanly without setting session_data
             expr_values_clavata = expr_data_clavata.iloc[0, 1:].values
             tissue_names_clavata = expr_data_clavata.columns[1:]
-            if expr_data_clavata.empty:
-                return None
+
+        # Check for Both
         else:
             expr_data = expression_data_filtered[expression_data_filtered["Orthogroup"] == orthogroup]
-            expr_data_clavata = expression_data_clavata_filtered[expression_data_clavata_filtered["Orthogroup"] == orthogroup]
+            expr_data_clavata = expression_data_clavata_filtered[
+                expression_data_clavata_filtered["Orthogroup"] == orthogroup
+            ]
 
-            expr_values = expr_data.iloc[0, 1:].values  #Exclude "Orthogroup" column
-            expr_values_clavata = expr_data_clavata.iloc[0, 1:].values
-
-            tissue_names = expr_data.columns[1:] 
-
-            if expr_data.empty or expr_data_clavata.empty:
+            if expr_data.empty and expr_data_clavata.empty:
                 return None
+            if expr_data.empty or expr_data_clavata.empty:
+                return None  # Return cleanly if one dataset is empty
 
+            expr_values = expr_data.iloc[0, 1:].values
+            expr_values_clavata = expr_data_clavata.iloc[0, 1:].values
+            tissue_names = expr_data.columns[1:]
+
+        # Generate plots
         if input.view_selector() == "Spider Visualization":
             if spider_choice == "Bridge Spider":
-                img_path = create_spider_visualization_with_animation(svg_files, spider_image_path, expression_values=expr_values)
-                return {
-                    "src": img_path,
-                    "width": "600px",
-                    "height": "600px",
-                }
+                img_path = create_spider_visualization_with_animation(
+                    svg_files, spider_image_path, expression_values=expr_values
+                )
+                return {"src": img_path, "width": "600px", "height": "600px"}
             elif spider_choice == "Clavata":
-                img_path = create_spider_visualization_with_animation(svg_files, spider_image_path, expression_values_clavata=expr_values_clavata)
-                return {
-                    "src": img_path,
-                    "width": "600px",
-                    "height": "600px",
-                }
+                img_path = create_spider_visualization_with_animation(
+                    svg_files, spider_image_path, expression_values_clavata=expr_values_clavata
+                )
+                return {"src": img_path, "width": "600px", "height": "600px"}
             else:
-                img_path = create_spider_visualization_with_animation(svg_files, spider_image_path, expression_values=expr_values, expression_values_clavata=expr_values_clavata)
-                return {
-                    "src": img_path,
-                    "width": "1400px",
-                    "height": "600px",
-                }
+                img_path = create_spider_visualization_with_animation(
+                    svg_files, spider_image_path, expression_values=expr_values,
+                    expression_values_clavata=expr_values_clavata
+                )
+                return {"src": img_path, "width": "1400px", "height": "600px"}
         else:
             if spider_choice == "Bridge Spider":
                 img_path = create_expression_boxplot(expression_values=expr_values, tissue_names=tissue_names)
-                return {
-                    "src": img_path,
-                    "width": "600px",
-                    "height": "600px",
-                }
+                return {"src": img_path, "width": "600px", "height": "600px"}
             elif spider_choice == "Clavata":
                 img_path = create_expression_boxplot(expression_values_clavata=expr_values_clavata, tissue_names=tissue_names_clavata)
-                return {
-                    "src": img_path,
-                    "width": "600px",
-                    "height": "600px",
-                }
+                return {"src": img_path, "width": "600px", "height": "600px"}
             else:
-                img_path = create_expression_boxplot(expression_values=expr_values, tissue_names=tissue_names, expression_values_clavata= expr_values_clavata)
-                return {
-                    "src": img_path,
-                    "width": "1100px",
-                    "height": "600px",
-                }
+                img_path = create_expression_boxplot(
+                    expression_values=expr_values, tissue_names=tissue_names,
+                    expression_values_clavata=expr_values_clavata
+                )
+                return {"src": img_path, "width": "1100px", "height": "600px"}
+
+
        
 
 
