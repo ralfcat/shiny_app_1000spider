@@ -1,0 +1,20 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Temporary files
+*.tmp
+*.log
+*.gif
+*.png
+
+# Virtual environments
+venv/
+ENV/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Node artifacts
+frontend/node_modules/
+frontend/dist/

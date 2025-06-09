@@ -12,19 +12,19 @@ import xml.etree.ElementTree as ET
 import numpy as np
 
 # Paths to data files
-blast_db_path = "C:\\Users\\victo\\Documents\\1000spider\\shiny_app\\combined_genes_blastdb\\combined_genes"
-orthogroup_data_path = "C:/Users/victo/Documents/1000spider/shiny_app/filtered_with_ids_no_dupes.tsv"
-expression_data_path = "C:/Users/victo/Documents/1000spider/shiny_app/summed_lasc_expression.txt"
-spider_image_path = "C:/Users/victo/Documents/1000spider/shiny_app/spider_image.png"
+blast_db_path = "path/to/project/combined_genes_blastdb/combined_genes"
+orthogroup_data_path = "path/to/project/filtered_with_ids_no_dupes.tsv"
+expression_data_path = "path/to/project/summed_lasc_expression.txt"
+spider_image_path = "path/to/project/spider_image.png"
 # Define the mapping between expression columns and SVG files
 tissue_to_svg = {
-    "Flagelliform-gland": "C:/Users/victo/Documents/1000spider/shiny_app/Flagelliform",
-    "head": "C:/Users/victo/Documents/1000spider/shiny_app/head",
-    "Major-ampullate-gland": "C:/Users/victo/Documents/1000spider/shiny_app/Major_ampullate",
-    "Minor-ampullate-gland": "C:/Users/victo/Documents/1000spider/shiny_app/minor_ampullate",
-    "Aggregate-gland": "C:/Users/victo/Documents/1000spider/shiny_app/Aggregate",
-    "Aciniform-Pyriform-gland": "C:/Users/victo/Documents/1000spider/shiny_app/aciniform_pyriform",
-    "Tubuliform-gland": "C:/Users/victo/Documents/1000spider/shiny_app/Tubuliform",
+    "Flagelliform-gland": "path/to/project/Flagelliform",
+    "head": "path/to/project/head",
+    "Major-ampullate-gland": "path/to/project/Major_ampullate",
+    "Minor-ampullate-gland": "path/to/project/minor_ampullate",
+    "Aggregate-gland": "path/to/project/Aggregate",
+    "Aciniform-Pyriform-gland": "path/to/project/aciniform_pyriform",
+    "Tubuliform-gland": "path/to/project/Tubuliform",
 }
 
 # Ensure the order of SVG files matches the columns in expression_data
