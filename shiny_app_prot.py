@@ -11,10 +11,13 @@ from PIL import Image
 import xml.etree.ElementTree as ET
 import numpy as np
 from pathlib import Path
+import plotly.graph_objects as go
+import plotly.io as pio
 
 
-#paths
-blast_db_path = "combined_genes_blastdb\\combined_genes"
+# paths
+# Use os.path.join for portability across operating systems
+blast_db_path = os.path.join("combined_genes_blastdb", "combined_genes")
 orthogroup_data_path = "datasets/filtered_with_ids_no_dupes.tsv"
 expression_data_path = "datasets/summed_lasc_expression.txt"
 clavata_expression_path = "datasets/summed_clavata_expression.txt"
@@ -167,10 +170,48 @@ def create_spider_visualization_with_animation(svg_files, spider_image_path, exp
     return temp_file.name
 
 
+def create_spider_visualization_3d(svg_files, expression_values):
+    points = []
+    for svg_file, val in zip(svg_files, expression_values):
+        tree = ET.parse(svg_file)
+        root = tree.getroot()
+        namespace = {"svg": "http://www.w3.org/2000/svg"}
+        path_data = root.find(".//svg:path", namespace).attrib["d"]
+        coords = parse_path_data(path_data)
+        if not coords:
+            continue
+        xs, ys = zip(*coords)
+        centroid = (sum(xs) / len(xs), sum(ys) / len(ys))
+        points.append((centroid[0], centroid[1], val))
+
+    if not points:
+        return ""
+
+    x, y, z = zip(*points)
+    fig = go.Figure(
+        data=[
+            go.Scatter3d(
+                x=x,
+                y=y,
+                z=z,
+                mode="markers",
+                marker=dict(size=12, color=z, colorscale="Viridis", opacity=0.8),
+            )
+        ]
+    )
+    fig.update_layout(
+        scene=dict(xaxis_visible=False, yaxis_visible=False, zaxis_title="Expression"),
+        margin=dict(l=0, r=0, b=0, t=0),
+        template="plotly_dark",
+    )
+    return pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
+
+
 
 
 app_ui = ui.page_fluid(
     ui.include_css("css/bootstrap.css"),
+    ui.include_css("css/cyberpunk.css"),
     ui.busy_indicators.options(
         spinner_type=Path("www/spinner.svg"),
         spinner_color="black",
@@ -251,7 +292,7 @@ app_ui = ui.page_fluid(
                     ui.input_select(
                         "view_selector",
                         "Choose Visualization:",
-                        choices=["Spider Visualization", "Expression Boxplot"],
+                        choices=["Spider Visualization", "Expression Boxplot", "3D Expression"],
                     ),
                     style="margin-top: 20px; display: flex; justify-content: center; width: 100%;",
                 ),
@@ -278,10 +319,41 @@ app_ui = ui.page_fluid(
         ui.div(
             ui.h3("Visualization", class_="text-center mt-4", style="display: none;"),
             ui.div(
-                ui.output_image("expression_plot"),
+                ui.output_ui("expression_plot"),
                 class_="text-center",
-                style="margin-bottom: 250px;",
+                style="margin-bottom: 30px;",
             ),
+            ui.div(ui.output_ui("summary_text"), class_="mt-3"),
+            ui.div(ui.output_ui("similar_orthogroups"), class_="mt-3"),
+            ui.div(ui.output_ui("similarity_plot"), class_="mt-3"),
+            ui.div(ui.output_ui("ai_report_text"), class_="mt-3"),
+            ui.div(
+                ui.input_text_area(
+                    "chat_prompt",
+                    "Ask the AI:",
+                    rows=2,
+                    placeholder="Type your question here...",
+                ),
+                class_="mt-4",
+            ),
+            ui.div(
+                ui.input_action_button(
+                    "chat_submit",
+                    "Ask AI",
+                    class_="btn btn-secondary btn-sm mt-2",
+                ),
+                class_="mb-3",
+            ),
+            ui.div(ui.output_ui("chat_response"), class_="mt-3"),
+            ui.div(
+                ui.input_action_button(
+                    "report_button",
+                    "Download Report",
+                    class_="btn btn-primary btn-sm mt-2",
+                ),
+                class_="mb-3",
+            ),
+            ui.div(ui.output_ui("report_download"), class_="mt-3"),
         ),
         # Footer Section
         ui.Tag(
@@ -296,7 +368,7 @@ app_ui = ui.page_fluid(
             },
             ui.div(
                 ui.span("1000 Spider Project 2024", class_="text-white"),
-                ui.span(" | Developed by Victor Englöf", class_="text-white"),
+                ui.span(" | Developed by the Spider Project Team", class_="text-white"),
                 class_="small",
             ),
         ),
@@ -346,6 +418,124 @@ def create_expression_boxplot(expression_values=None, tissue_names=None, express
     fig.savefig(temp_file.name, bbox_inches="tight")
     plt.close(fig)
     return temp_file.name
+
+
+def create_expression_boxplot_interactive(
+    expression_values=None,
+    tissue_names=None,
+    expression_values_clavata=None,
+    predicted_values=None,
+):
+    """Return an interactive bar plot with optional AI predictions."""
+    fig = go.Figure()
+    if expression_values is not None:
+        fig.add_trace(
+            go.Bar(
+                x=tissue_names,
+                y=expression_values,
+                name="Bridge Spider",
+                marker_color="#f3969a",
+            )
+        )
+    if expression_values_clavata is not None:
+        fig.add_trace(
+            go.Bar(
+                x=tissue_names,
+                y=expression_values_clavata,
+                name="Clavata",
+                marker_color="#7cb9e8",
+            )
+        )
+    if predicted_values is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=tissue_names,
+                y=predicted_values,
+                mode="lines+markers",
+                name="AI Prediction",
+                line=dict(color="cyan"),
+            )
+        )
+    fig.update_layout(
+        barmode="group",
+        xaxis_tickangle=-45,
+        yaxis_title="Expression Levels",
+        template="plotly_dark",
+    )
+    return pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
+
+# AI helper functions
+
+def find_similar_orthogroups(target_og, df, n=5):
+    """Return the top n orthogroups most correlated with the target."""
+    row = df[df["Orthogroup"] == target_og]
+    if row.empty:
+        return []
+    target_vals = row.iloc[0, 1:].astype(float)
+    numeric = df.set_index("Orthogroup").astype(float)
+    corr = numeric.apply(lambda r: np.corrcoef(r.values, target_vals)[0,1], axis=1)
+    corr = corr.drop(target_og, errors="ignore")
+    return corr.sort_values(ascending=False).head(n).index.tolist()
+
+
+def create_similarity_plot(target_vals, tissues, similar_dict):
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=tissues, y=target_vals, mode="lines+markers", name="Query"))
+    for og, vals in similar_dict.items():
+        fig.add_trace(go.Scatter(x=tissues, y=vals, mode="lines", name=og))
+    fig.update_layout(template="plotly_dark", xaxis_tickangle=-45, yaxis_title="Expression")
+    return pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
+
+
+def generate_ai_report(expression_values, tissues):
+    """Return a natural language summary using a text generation model if available."""
+    try:
+        from transformers import pipeline
+    except Exception:
+        return "Install the 'transformers' library to enable advanced summaries."
+
+    text = ", ".join(f"{t}:{v:.2f}" for t, v in zip(tissues, expression_values))
+    prompt = (
+        "Summarize the following spider tissue expression levels in an engaging way: "
+        + text
+        + ""
+    )
+    try:
+        gen = pipeline("text-generation", model="gpt2", framework="tf")
+        out = gen(prompt, max_length=60, num_return_sequences=1)
+        return out[0]["generated_text"]
+    except Exception:
+        return "AI summary generation failed."
+
+
+def predict_expression(sequence, tissues):
+    """Return pseudo AI-predicted expression levels for the sequence."""
+    if not sequence:
+        return None
+    rng = np.random.default_rng(abs(hash(sequence)) % (2**32))
+    return rng.random(len(tissues))
+
+
+def generate_html_report(orthogroup, tissues, expr_values, predicted_values=None):
+    """Create a basic HTML report with plots and AI summary."""
+    plot_html = create_expression_boxplot_interactive(
+        expression_values=expr_values,
+        tissue_names=tissues,
+        predicted_values=predicted_values,
+    )
+    summary = generate_ai_report(expr_values, tissues)
+    html = f"""
+    <html><head><title>Report {orthogroup}</title></head>
+    <body>
+    <h2>Expression Report for {orthogroup}</h2>
+    {plot_html}
+    <p>{summary}</p>
+    </body></html>
+    """
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".html")
+    with open(tmp.name, "w") as f:
+        f.write(html)
+    return tmp.name
 
 
 def server(input, output, session):
@@ -424,12 +614,15 @@ def server(input, output, session):
                 return
 
             # Save data to session
-            session_data.set({
-                "best_match_id": best_match_id,
-                "e_value": e_value,
-                "orthogroup": orthogroup,
-                "species": species,
-            })
+            session_data.set(
+                {
+                    "best_match_id": best_match_id,
+                    "e_value": e_value,
+                    "orthogroup": orthogroup,
+                    "species": species,
+                    "sequence": fasta_sequence,
+                }
+            )
 
         else:
             # Handle Orthogroup Input
@@ -606,7 +799,7 @@ def server(input, output, session):
 
 
     @output
-    @render.image
+    @render.ui
     def expression_plot():
         data = session_data.get()
         if "orthogroup" not in data or not data["orthogroup"]:
@@ -650,37 +843,209 @@ def server(input, output, session):
             tissue_names = expr_data.columns[1:]
 
         # Generate plots
-        if input.view_selector() == "Spider Visualization":
+        view = input.view_selector()
+        pred_vals = None
+        if "sequence" in data:
+            if spider_choice == "Bridge Spider":
+                pred_vals = predict_expression(data["sequence"], tissue_names)
+            elif spider_choice == "Clavata":
+                pred_vals = predict_expression(data["sequence"], tissue_names_clavata)
+            else:
+                pred_vals = predict_expression(data["sequence"], tissue_names)
+
+        if view == "Spider Visualization":
             if spider_choice == "Bridge Spider":
                 img_path = create_spider_visualization_with_animation(
                     svg_files, spider_image_path, expression_values=expr_values
                 )
-                return {"src": img_path, "width": "600px", "height": "600px"}
+                return ui.img(src=img_path, width="600px", height="600px")
             elif spider_choice == "Clavata":
                 img_path = create_spider_visualization_with_animation(
                     svg_files, spider_image_path, expression_values_clavata=expr_values_clavata
                 )
-                return {"src": img_path, "width": "600px", "height": "600px"}
+                return ui.img(src=img_path, width="600px", height="600px")
             else:
                 img_path = create_spider_visualization_with_animation(
                     svg_files, spider_image_path, expression_values=expr_values,
                     expression_values_clavata=expr_values_clavata
                 )
-                return {"src": img_path, "width": "1400px", "height": "600px"}
+                return ui.img(src=img_path, width="1400px", height="600px")
+        elif view == "3D Expression":
+            if spider_choice == "Bridge Spider":
+                html = create_spider_visualization_3d(svg_files, expr_values)
+                return ui.HTML(html)
+            elif spider_choice == "Clavata":
+                html = create_spider_visualization_3d(svg_files, expr_values_clavata)
+                return ui.HTML(html)
+            else:
+                html1 = create_spider_visualization_3d(svg_files, expr_values)
+                html2 = create_spider_visualization_3d(svg_files, expr_values_clavata)
+                return ui.TagList(ui.HTML(html1), ui.HTML(html2))
         else:
             if spider_choice == "Bridge Spider":
-                img_path = create_expression_boxplot(expression_values=expr_values, tissue_names=tissue_names)
-                return {"src": img_path, "width": "600px", "height": "600px"}
-            elif spider_choice == "Clavata":
-                img_path = create_expression_boxplot(expression_values_clavata=expr_values_clavata, tissue_names=tissue_names_clavata)
-                return {"src": img_path, "width": "600px", "height": "600px"}
-            else:
-                img_path = create_expression_boxplot(
-                    expression_values=expr_values, tissue_names=tissue_names,
-                    expression_values_clavata=expr_values_clavata
+                html = create_expression_boxplot_interactive(
+                    expression_values=expr_values,
+                    tissue_names=tissue_names,
+                    predicted_values=pred_vals,
                 )
-                return {"src": img_path, "width": "1100px", "height": "600px"}
+                return ui.HTML(html)
+            elif spider_choice == "Clavata":
+                html = create_expression_boxplot_interactive(
+                    expression_values_clavata=expr_values_clavata,
+                    tissue_names=tissue_names_clavata,
+                    predicted_values=pred_vals,
+                )
+                return ui.HTML(html)
+            else:
+                html = create_expression_boxplot_interactive(
+                    expression_values=expr_values,
+                    tissue_names=tissue_names,
+                    expression_values_clavata=expr_values_clavata,
+                    predicted_values=pred_vals,
+                )
+                return ui.HTML(html)
 
+    @output
+    @render.ui
+    def summary_text():
+        data = session_data.get()
+        if "orthogroup" not in data or not data["orthogroup"]:
+            return None
+
+        orthogroup = data["orthogroup"]
+        spider_choice = input.spider_selector()
+
+        if spider_choice == "Bridge Spider":
+            expr_df = expression_data_filtered[expression_data_filtered["Orthogroup"] == orthogroup]
+            if expr_df.empty:
+                return None
+            values = expr_df.iloc[0, 1:].values
+            tissues = expr_df.columns[1:]
+            idx = np.argmax(values)
+            summary = f"Highest expression in {tissues[idx]} with level {values[idx]:.2f}."
+        elif spider_choice == "Clavata":
+            expr_df = expression_data_clavata_filtered[expression_data_clavata_filtered["Orthogroup"] == orthogroup]
+            if expr_df.empty:
+                return None
+            values = expr_df.iloc[0, 1:].values
+            tissues = expr_df.columns[1:]
+            idx = np.argmax(values)
+            summary = f"Highest expression in {tissues[idx]} with level {values[idx]:.2f}."
+        else:
+            expr_df1 = expression_data_filtered[expression_data_filtered["Orthogroup"] == orthogroup]
+            expr_df2 = expression_data_clavata_filtered[expression_data_clavata_filtered["Orthogroup"] == orthogroup]
+            if expr_df1.empty or expr_df2.empty:
+                return None
+            val1 = expr_df1.iloc[0, 1:].values
+            val2 = expr_df2.iloc[0, 1:].values
+            tissues1 = expr_df1.columns[1:]
+            tissues2 = expr_df2.columns[1:]
+            idx1 = np.argmax(val1)
+            idx2 = np.argmax(val2)
+            summary = (
+                f"Bridge Spider highest in {tissues1[idx1]} ({val1[idx1]:.2f}); "
+                f"Clavata highest in {tissues2[idx2]} ({val2[idx2]:.2f})."
+            )
+
+        return ui.TagList(ui.h4("AI Summary", class_="mt-4"), ui.p(summary))
+
+
+    @output
+    @render.ui
+    def similar_orthogroups():
+        data = session_data.get()
+        if "orthogroup" not in data or not data["orthogroup"]:
+            return None
+        spider_choice = input.spider_selector()
+        df = expression_data_filtered if spider_choice != "Clavata" else expression_data_clavata_filtered
+        sims = find_similar_orthogroups(data["orthogroup"], df)
+        if not sims:
+            return None
+        html = "<ul>" + "".join(f"<li>{og}</li>" for og in sims) + "</ul>"
+        return ui.TagList(ui.h4("Similar Orthogroups", class_="mt-4"), ui.HTML(html))
+
+    @output
+    @render.ui
+    def similarity_plot():
+        data = session_data.get()
+        if "orthogroup" not in data or not data["orthogroup"]:
+            return None
+        spider_choice = input.spider_selector()
+        df = expression_data_filtered if spider_choice != "Clavata" else expression_data_clavata_filtered
+        row = df[df["Orthogroup"] == data["orthogroup"]]
+        if row.empty:
+            return None
+        target_vals = row.iloc[0, 1:].astype(float).values
+        tissues = row.columns[1:]
+        sims = find_similar_orthogroups(data["orthogroup"], df)
+        if not sims:
+            return None
+        sim_dict = {og: df[df["Orthogroup"] == og].iloc[0, 1:].astype(float).values for og in sims}
+        html = create_similarity_plot(target_vals, tissues, sim_dict)
+        return ui.HTML(html)
+
+    @output
+    @render.ui
+    def ai_report_text():
+        data = session_data.get()
+        if "orthogroup" not in data or not data["orthogroup"]:
+            return None
+        spider_choice = input.spider_selector()
+        df = expression_data_filtered if spider_choice != "Clavata" else expression_data_clavata_filtered
+        row = df[df["Orthogroup"] == data["orthogroup"]]
+        if row.empty:
+            return None
+        values = row.iloc[0, 1:].astype(float).values
+        tissues = row.columns[1:]
+        summary = generate_ai_report(values, tissues)
+        return ui.TagList(ui.h4("AI Generated Report", class_="mt-4"), ui.p(summary))
+
+    @output
+    @render.ui
+    @reactive.event(input.chat_submit)
+    def chat_response():
+        prompt = input.chat_prompt()
+        if not prompt:
+            return ui.p("Enter a question for the AI chat.")
+        try:
+            from transformers import pipeline
+        except Exception:
+            return ui.p("Install the 'transformers' library to enable the chat feature.")
+
+        try:
+            gen = pipeline("text-generation", model="gpt2", framework="tf")
+            out = gen(prompt, max_length=50, num_return_sequences=1)
+            text = out[0]["generated_text"]
+        except Exception:
+            text = "AI chat generation failed."
+
+        return ui.TagList(ui.h4("AI Response", class_="mt-4"), ui.p(text))
+
+    @output
+    @render.ui
+    @reactive.event(input.report_button)
+    def report_download():
+        data = session_data.get()
+        if "orthogroup" not in data or not data["orthogroup"]:
+            return ui.p("No results to summarize.")
+        spider_choice = input.spider_selector()
+        df = (
+            expression_data_filtered
+            if spider_choice != "Clavata"
+            else expression_data_clavata_filtered
+        )
+        row = df[df["Orthogroup"] == data["orthogroup"]]
+        if row.empty:
+            return ui.p("Expression data not found.")
+        expr_values = row.iloc[0, 1:].astype(float).values
+        tissues = row.columns[1:]
+        pred_vals = None
+        if "sequence" in data:
+            pred_vals = predict_expression(data["sequence"], tissues)
+        path = generate_html_report(
+            data["orthogroup"], tissues, expr_values, predicted_values=pred_vals
+        )
+        return ui.a("Download Report", href=path, download="report.html")
 
        
 

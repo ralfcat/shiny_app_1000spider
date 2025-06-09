@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load the file
-file_path = "C:/Users/victo/Documents/1000spider/shiny_app/filtered_with_ids_no_dupes.tsv"
+file_path = "path/to/project/filtered_with_ids_no_dupes.tsv"
 data = pd.read_csv(file_path, sep="\t", index_col=0)  # Adjust index_col based on the file format
 
 # Search for a specific entry

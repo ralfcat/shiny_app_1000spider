@@ -11,7 +11,9 @@ def install_packages():
         "pandas",
         "matplotlib",
         "Pillow",
-        "numpy"
+        "numpy",
+        "plotly",
+        "streamlit"
     ]
     
     print("Installing required packages...")

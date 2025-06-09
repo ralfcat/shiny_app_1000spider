@@ -10,10 +10,10 @@ import plotly.express as px
 import plotly.io as pio
 
 # Paths to data files
-blast_db_path = "C:\\Users\\victo\\Documents\\1000spider\\shiny_app\\combined_genes_blastdb\\combined_genes"
-orthogroup_data_path = "C:/Users/victo/Documents/1000spider/shiny_app/filtered_with_ids_no_dupes.tsv"
-expression_data_path = "C:/Users/victo/Documents/1000spider/shiny_app/summed_lasc_expression.txt"
-spider_image_path = "C:/Users/victo/Documents/1000spider/shiny_app/spider_image.png"  # Replace with your image path
+blast_db_path = "path/to/project/combined_genes_blastdb/combined_genes"
+orthogroup_data_path = "path/to/project/filtered_with_ids_no_dupes.tsv"
+expression_data_path = "path/to/project/summed_lasc_expression.txt"
+spider_image_path = "path/to/project/spider_image.png"  # Replace with your image path
 svg_files = [
     "Flagelliform",  # Replace with your SVG file paths
     "head",

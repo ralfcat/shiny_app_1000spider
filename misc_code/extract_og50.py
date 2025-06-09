@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Path to the TSV file
-file_path = "C:/Users/victo/Documents/1000spider/shiny_app/filtered_with_ids_no_dupes.tsv"
+file_path = "path/to/project/filtered_with_ids_no_dupes.tsv"
 
 # Load the dataset
 data = pd.read_csv(file_path, sep="\t", index_col=0)

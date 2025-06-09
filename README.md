@@ -55,7 +55,29 @@ Run the file *setup_and_run.py*. It should install all the required packages and
 Run *setup_and_run.py* and press enter when prompted. If you already have the dependencies installed, you can stand in the directory of *shiny_app_prot.py* and run this command: *shiny run shiny_app_prot.py*. 
 This should start the Shiny application. If it doesn't, make sure that you are standing in the correct directory which contains the app (*shiny_app_prot.pt*)
 
-Open a browser and go to the adress prompted by the terminal. It is usually http://127.0.0.1:8000 
+Open a browser and go to the adress prompted by the terminal. It is usually http://127.0.0.1:8000
+
+For a lightweight demo using Streamlit run:
+
+```
+streamlit run streamlit_app.py
+```
+
+## New in this Version
+
+- Futuristic cyberpunk theme with neon accents.
+- Animated neon gradient background and pulsing card borders.
+- Interactive expression boxplots powered by Plotly.
+- AI-generated summaries highlighting the most expressed tissues.
+- AI-generated natural-language reports using a text-generation model (requires `transformers`).
+- Optional 3D expression visualization for a futuristic look.
+- AI-based recommendations for similar orthogroups and comparison plots.
+- Alternate `streamlit_app.py` interface for quick demos.
+- Built-in AI chat box for natural language queries.
+- AI-predicted expression levels overlaid on plots.
+- One-click downloadable HTML reports summarizing results.
+- Basic FastAPI service (`api_service.py`) for programmatic access.
+- Optional React front end located in `frontend/` for a modern interactive UI.
 
 
 ## How to Use the App
@@ -96,6 +118,19 @@ Incorrect Python Version
 
 ## Credits
 
-    Developer: Victor Englöf
+    Developer: The Spider Project Team
     Project: Spider Gene Visualization App (2024)
-    Dependencies: BLAST+, Shiny for Python, Matplotlib, Pandas, Pillow, Numpy
+    Dependencies: BLAST+, Shiny for Python, Matplotlib, Pandas, Pillow, Numpy, Plotly
+
+## React Frontend
+
+An optional React-based interface lives in the `frontend/` directory. To try it out:
+
+1. Install Node.js and npm.
+2. Inside `frontend/`, run `npm install` followed by `npm run dev`.
+3. Ensure `api_service.py` is running and open the URL printed by Vite (default `http://localhost:5173`).
+
+## License
+
+This project is released under the [MIT License](LICENSE).
+

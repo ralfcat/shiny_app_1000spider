@@ -1,0 +1,40 @@
+body {
+    background: linear-gradient(45deg, #0d0d0d, #222222, #0d0d0d);
+    background-size: 400% 400%;
+    animation: gradientShift 20s ease infinite;
+    color: #e0e0e0;
+    font-family: 'Montserrat', sans-serif;
+}
+
+h2, h3, h4 {
+    color: #00ffff;
+    text-shadow: 0 0 5px #0ff;
+}
+
+.btn-secondary {
+    background-color: #ff0080;
+    border-color: #ff0080;
+}
+
+.card {
+    background-color: #1a1a1a;
+    border-color: #00ffff;
+    border-radius: 8px;
+    box-shadow: 0 0 20px #00ffff88;
+    animation: neonPulse 2s ease-in-out infinite alternate;
+}
+
+footer {
+    background-color: #1a1a1a !important;
+}
+
+@keyframes gradientShift {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+}
+
+@keyframes neonPulse {
+    from {box-shadow: 0 0 5px #00ffff88;}
+    to {box-shadow: 0 0 20px #00ffff88;}
+}
